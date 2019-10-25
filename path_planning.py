@@ -1,12 +1,12 @@
-__author__ = 'Newton'
-
-# Contains multiple shortest path algorithms
+__author__ = 'Acer'
 
 import heapq
 import networkx as nx
 from networkx.utils import generate_unique_node
 from networkx import NetworkXError
 
+
+#TODO: Implement this in C using http://www.cs.yale.edu/homes/aspnes/pinewiki/C(2f)Graphs.html
 # -*- coding: utf-8 -*-
 """
 Shortest path algorithms for weighed graphs.
@@ -21,7 +21,7 @@ __author__ = """\n""".join(['Aric Hagberg <hagberg@lanl.gov>',
 #    All rights reserved.
 #    BSD license.
 
-__all__ = ['dijkstra_path',
+__all__ = ['single_source_shortest_path_length','dijkstra_path',
            'dijkstra_path_length',
            'bidirectional_dijkstra',
            'single_source_dijkstra',
@@ -31,6 +31,63 @@ __all__ = ['dijkstra_path',
            'all_pairs_dijkstra_path_length',
            'dijkstra_predecessor_and_distance',
            'bellman_ford','negative_edge_cycle']
+
+
+def single_source_shortest_path_length(G,source,cutoff=None,target_cutoffs=[]):
+    """Compute the shortest path lengths from source to all reachable nodes.
+
+    Parameters
+    ----------
+    G : NetworkX graph
+
+    source : node
+       Starting node for path
+
+    cutoff : integer, optional
+        Depth to stop the search. Only paths of length <= cutoff are returned.
+
+    Returns
+    -------
+    lengths : dictionary
+        Dictionary of shortest path lengths keyed by target.
+
+    Examples
+    --------
+    >>> G=nx.path_graph(5)
+    >>> length=nx.single_source_shortest_path_length(G,0)
+    >>> length[4]
+    4
+    >>> print(length)
+    {0: 0, 1: 1, 2: 2, 3: 3, 4: 4}
+
+    See Also
+    --------
+    shortest_path_length
+    """
+    tc = []
+    if target_cutoffs:
+        tc = set(target_cutoffs[:])
+
+    seen=set()                  # level (number of hops) when seen in BFS
+    seen_dict = {}
+    level=0                  # the current level
+    nextlevel={source:1}  # dict of nodes to check at next level
+    while nextlevel:
+        thislevel=nextlevel  # advance to next level
+        nextlevel={}         # and start a new list (fringe)
+
+        for v in thislevel:
+            if v not in seen:
+                seen.add(v)
+                nextlevel.update(G[v]) # add neighbors of v
+                if v in tc:
+                    seen_dict[v] = level
+                    tc.remove(v)
+                    if not tc:
+                        return seen_dict
+
+        level=level+1
+    return seen_dict  # return all path lengths as dictionary
 
 def dijkstra_path(G, source, target, weight='weight'):
     """Returns the shortest path from source to target in a weighted graph G.
@@ -76,6 +133,7 @@ def dijkstra_path(G, source, target, weight='weight'):
     (length,path)=single_source_dijkstra(G, source, target=target,
                                          weight=weight)
     try:
+        #print "Length to", str(target) + ":", str(path[target])
         return path[target]
     except KeyError:
         raise nx.NetworkXNoPath("node %s not reachable from %s"%(source,target))
@@ -173,8 +231,7 @@ def single_source_dijkstra_path(G,source, cutoff=None, weight='weight'):
     return path
 
 
-def single_source_dijkstra_path_length(G, source, cutoff= None,
-                                       weight= 'weight', target_cutoffs=[]):
+def single_source_dijkstra_path_length(G, source, weight= 'weight', target_cutoffs=[], only_targets=False):
     #print "Target cutoffs:", target_cutoffs
     """Compute the shortest path length between source and all other
     reachable nodes for a weighted graph.
@@ -220,47 +277,40 @@ def single_source_dijkstra_path_length(G, source, cutoff= None,
 
     """
     dist = {}  # dictionary of final distances
+	final_dist ={}
+    target_cutoffs = set(target_cutoffs)
+
+    if source in target_cutoffs:
+        target_cutoffs.remove(source)
     seen = {source:0}
     fringe=[] # use heapq with (distance,label) tuples
     heapq.heappush(fringe,(0,source))
     while fringe:
         (d,v)=heapq.heappop(fringe)
+
         if v in dist:
             continue # already searched this node.
+
         dist[v] = d
-
         if v in target_cutoffs:
-            if v in target_cutoffs:
-                target_cutoffs.remove(v)
-
+            target_cutoffs.remove(v)
+			final_dist[v] = d
             if not target_cutoffs:
-                return dist
+                #print dist
+                return final_dist if only_targets else dist
 
         #for ignore,w,edgedata in G.edges_iter(v,data=True):
         #is about 30% slower than the following
-        if G.is_multigraph():
-            edata=[]
-            for w,keydata in G[v].items():
-                minweight=min((dd.get(weight,1)
-                               for k,dd in keydata.items()))
-                edata.append((w,{weight:minweight}))
-        else:
-            edata=iter(G[v].items())
+        edata=iter(G[v].items())
 
         for w,edgedata in edata:
             vw_dist = dist[v] + edgedata.get(weight,1)
-            if cutoff is not None:
-                if vw_dist>cutoff:
-                    continue
 
-            if w in dist:
-                if vw_dist < dist[w]:
-                    raise ValueError('Contradictory paths found:',
-                                     'negative weights?')
-            elif w not in seen or vw_dist < seen[w]:
+            if w not in seen or vw_dist < seen[w]:
                 seen[w] = vw_dist
                 heapq.heappush(fringe,(vw_dist,w))
-
+    if target_cutoffs:
+        raise ValueError("There are still target cutoffs:", str(target_cutoffs))
     return dist
 
 
@@ -347,9 +397,7 @@ def single_source_dijkstra(G,source,target=None,cutoff=None,weight='weight'):
 
         for w,edgedata in edata:
             vw_dist = dist[v] + edgedata.get(weight,1)
-            if cutoff is not None:
-                if vw_dist>cutoff:
-                    continue
+
             if w in dist:
                 if vw_dist < dist[w]:
                     raise ValueError('Contradictory paths found:',
@@ -465,6 +513,8 @@ def astar_path(G, source, target, heuristic=None, weight='weight', search_space_
             if search_space_nodes:
                 return path, explored.keys()
             elif search_space_size:
+                return path, len(explored.keys())
+            elif h:
                 return path, i #len(explored.keys())
 
             return path
@@ -493,6 +543,174 @@ def astar_path(G, source, target, heuristic=None, weight='weight', search_space_
 
     raise nx.NetworkXNoPath("Node %s not reachable from %s" % (source, target))
 
+#    Copyright (C) 2004-2011 by
+#    Aric Hagberg <hagberg@lanl.gov>
+#    Dan Schult <dschult@colgate.edu>
+#    Pieter Swart <swart@lanl.gov>
+#    All rights reserved.
+#    BSD license.
+def astar_path_pathmax(G, source, target, heuristic=None, weight='weight', search_space_nodes=False, search_space_size=False):
+    """Return a list of nodes in a shortest path between source and target
+    using the A* ("A-star") algorithm.
+
+    There may be more than one shortest path.  This returns only one.
+
+    Parameters
+    ----------
+    G : NetworkX graph
+
+    source : node
+       Starting node for path
+
+    target : node
+       Ending node for path
+
+    heuristic : function
+       A function to evaluate the estimate of the distance
+       from the a node to the target.  The function takes
+       two nodes arguments and must return a number.
+
+    weight: string, optional (default='weight')
+       Edge data key corresponding to the edge weight.
+
+    search_space_nodes: boolean, optional (default=False)
+        Keep track of visited nodes and return them when returning the path
+
+    search_space_size: boolean, optional (default=False)
+        Count the number of visited nodes and return them when returning the path
+
+    Raises
+    ------
+    NetworkXNoPath
+        If no path exists between source and target.
+
+    Examples
+    --------
+    >>> G=nx.path_graph(5)
+    >>> print(nx.astar_path(G,0,4))
+    [0, 1, 2, 3, 4]
+    >>> G=nx.grid_graph(dim=[3,3])  # nodes are two-tuples (x,y)
+    >>> def dist(a, b):
+    ...    (x1, y1) = a
+    ...    (x2, y2) = b
+    ...    return ((x1 - x2) ** 2 + (y1 - y2) ** 2) ** 0.5
+    >>> print(nx.astar_path(G,(0,0),(2,2),dist))
+    [(0, 0), (0, 1), (1, 1), (1, 2), (2, 2)]
+
+
+    See Also
+    --------
+    shortest_path, dijkstra_path
+
+    """
+    if G.is_multigraph():
+        raise NetworkXError("astar_path() not implemented for Multi(Di)Graphs")
+
+    if heuristic is None:
+        # The default heuristic is h=0 - same as Dijkstra's algorithm
+        def heuristic(u, v):
+            return 0
+
+    push = heapq.heappush
+    pop = heapq.heappop
+
+    # The queue stores priority, node, cost to reach, and parent.
+    # Uses Python heapq to keep in priority order.
+    # Add a counter to the queue to prevent the underlying heap from
+    # attempting to compare the nodes themselves. The hash breaks ties in the
+    # priority and is guarenteed unique for all nodes in the graph.
+    c = heapq.count()
+    queue = [(0, next(c), source, 0, None)]
+
+    # Maps enqueued nodes to distance of discovered paths and the
+    # computed heuristics to target. We avoid computing the heuristics
+    # more than once and inserting the node into the queue too many times.
+    enqueued = {}
+    # Maps explored nodes to parent closest to the source.
+    explored = {}
+    i = 0
+    # For consistency, store the estimates
+    estimates = {source:heuristic(source,target)}
+    first = True
+    while queue:
+        i = i + 1
+        # Pop the smallest item from queue.
+        _, __, curnode, dist, parent = pop(queue)
+
+        if curnode == target:
+            path = [curnode]
+            node = parent
+            while node is not None:
+                path.append(node)
+                node = explored[node]
+            path.reverse()
+            if search_space_nodes:
+                return path, explored.keys()
+            elif search_space_size:
+                return path, len(explored.keys())
+            elif h:
+                return path, i #len(explored.keys())
+
+            return path
+
+        if curnode in explored:
+            continue
+
+        explored[curnode] = parent
+
+        for neighbor, w in G[curnode].items():
+            if neighbor in explored:
+                continue
+            ncost = dist + w.get(weight, 1)
+            if neighbor in enqueued:
+                qcost, h = enqueued[neighbor]
+                # if qcost < ncost, a longer path to neighbor remains
+                # enqueued. Removing it would need to filter the whole
+                # queue, it's better just to leave it there and ignore
+                # it when we visit the node a second time.
+                if qcost <= ncost:
+                    continue
+            else:
+                h = max(heuristic(neighbor, target), estimates[curnode]-w.get(weight,1))
+                estimates[neighbor] = h
+            enqueued[neighbor] = ncost, h
+            push(queue, (ncost + h, next(c), neighbor, ncost, curnode))
+
+    raise nx.NetworkXNoPath("Node %s not reachable from %s" % (source, target))
+
+def astar_path_length_pathmax(G, source, target, heuristic=None, weight='weight'):
+    """Return the length of the shortest path between source and target using
+    the A* ("A-star") algorithm.
+
+    Parameters
+    ----------
+    G : NetworkX graph
+
+    source : node
+       Starting node for path
+
+    target : node
+       Ending node for path
+
+    heuristic : function
+       A function to evaluate the estimate of the distance
+       from the a node to the target.  The function takes
+       two nodes arguments and must return a number.
+
+    Raises
+    ------
+    NetworkXNoPath
+        If no path exists between source and target.
+
+    See Also
+    --------
+    astar_path
+
+    """
+    path = astar_path_pathmax(G, source, target, heuristic, weight)
+    return sum(G[u][v].get(weight, 1) for u, v in zip(path[:-1], path[1:]))
+
+    
 
 def astar_path_length(G, source, target, heuristic=None, weight='weight'):
     """Return the length of the shortest path between source and target using
@@ -525,6 +743,7 @@ def astar_path_length(G, source, target, heuristic=None, weight='weight'):
     """
     path = astar_path(G, source, target, heuristic, weight)
     return sum(G[u][v].get(weight, 1) for u, v in zip(path[:-1], path[1:]))
+
 
 def dijkstra_predecessor_and_distance(G,source, cutoff=None, weight='weight'):
     """Compute shortest path length and predecessors on shortest paths
