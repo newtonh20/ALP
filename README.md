@@ -11,7 +11,7 @@ N Campbell, MJ Laszlo, S Mukherjee
 
 Algorithmic Foundations of Heuristic Search using Higher-Order Polygon Inequalities
 NH Campbell Jr
-[Nova Southeastern University		2016](https://nsuworks.nova.edu/cgi/viewcontent.cgi?article=1372&context=gscis_etd&httpsredir=1&referer=/)https://nsuworks.nova.edu/cgi/viewcontent.cgi?article=1372&context=gscis_etd&httpsredir=1&referer=/
+[Nova Southeastern University		2016](https://nsuworks.nova.edu/cgi/viewcontent.cgi?article=1372&context=gscis_etd&httpsredir=1&referer=/)
 
 Using quadrilaterals to compute the shortest path
 N Campbell Jr
