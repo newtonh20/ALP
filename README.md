@@ -4,9 +4,60 @@ Repository for the ALP (A*, Landmarks, and Polygon Inequality) algorithm
 
 Point-to-point shortest path distance queries are a core operation in graph analytics. However, preprocessing algorithms that speed up these queries rely on large data structures for reference. In this repository, we address the computational challenge introduced by these data structures when using landmark-based preprocessing algorithms on large graphs. 
 
+## Requirements
+
+- Python 3.11+ (tested)
+- NetworkX (graph data structures, Dijkstra/A*)
+- pytest (for running the test suite)
+- Optional: igraph, MySQLdb, memory_profiler, and other deps used by legacy scripts in `archive/`
+
+## Project structure
+
+- `src/alp/`: library code
+  - `core.py`: public ALP API and preprocessing
+  - `landmarks.py`: landmark selection strategies
+  - `partitioning.py`: graph Voronoi ownership
+  - `embedding.py`: local and pairwise landmark distances
+  - `heuristic.py`: ALP/ALT heuristic construction
+  - `astar.py`: A* wrapper using the ALP heuristic
+  - `__init__.py`: exports the high-level API
+- `tests/`: parity tests against NetworkX (`pytest`)
+- `examples/`: small runnable demos
+- `archive/`: legacy experiment scripts (Python 2 era); see imports note below
+- `docs/`: documentation stubs and notes
+
+## Testing and experiments
+
+- Run unit tests (parity checks vs NetworkX):
+  ```bash
+  python -m pytest
+  ```
+
+- Quick smoke test using the public API:
+  ```python
+  import networkx as nx
+  from alp import alp_preprocess, alp_shortest_path, alp_shortest_path_length
+
+  G = nx.grid_2d_graph(3, 3)  # small 3x3 grid
+  alpG = alp_preprocess(G, num_landmarks=3)
+  path = alp_shortest_path(alpG, (0, 0), (2, 2))
+  length = alp_shortest_path_length(alpG, (0, 0), (2, 2))
+  print(path, length)
+  ```
+
+- Legacy experiment scripts remain under `archive/`. Update their imports to pull from the library API:
+  ```python
+  from alp import alp_preprocess, alp_shortest_path, alp_shortest_path_length
+  ```
+  Then execute the script directly, for example:
+  ```bash
+  python archive/path_planning.py
+  python archive/dataset_characterization.py
+  ```
+
 ---
 
-## ALP
+## Deep Dive on ALP
 
 In a weighted graph $G = (V,E)$ endowed with a path metric $d(\cdot,\cdot)$, the computation of exact shortest paths traditionally proceeds via Dijkstra’s algorithm, which explores vertices in order of increasing tentative distance from a source. The performance bottleneck is not the asymptotic complexity but the geometric myopia: the algorithm cannot know in advance which parts of the graph are irrelevant to the geodesic between two specific vertices. A* addresses this by introducing a function $h(v)$ satisfying $0 \le h(v) \le d(v,t)$, where $t$ is the target. If such an admissible heuristic gives a reasonably sharp lower bound, A* prunes large swaths of the graph without affecting optimality. The challenge is to construct a function that can be computed in constant time yet retains enough geometric information about the global structure of the graph to be meaningfully predictive.
 
@@ -59,54 +110,3 @@ N Campbell Jr
 Computing shortest paths using A*, landmarks, and polygon inequalities
 N Campbell Jr
 [arXiv preprint arXiv:1603.01607](https://arxiv.org/abs/1603.01607)
-
-## Requirements
-
-- Python 3.11+ (tested)
-- NetworkX (graph data structures, Dijkstra/A*)
-- pytest (for running the test suite)
-- Optional: igraph, MySQLdb, memory_profiler, and other deps used by legacy scripts in `archive/`
-
-## Project structure
-
-- `src/alp/`: library code
-  - `core.py`: public ALP API and preprocessing
-  - `landmarks.py`: landmark selection strategies
-  - `partitioning.py`: graph Voronoi ownership
-  - `embedding.py`: local and pairwise landmark distances
-  - `heuristic.py`: ALP/ALT heuristic construction
-  - `astar.py`: A* wrapper using the ALP heuristic
-  - `__init__.py`: exports the high-level API
-- `tests/`: parity tests against NetworkX (`pytest`)
-- `examples/`: small runnable demos
-- `archive/`: legacy experiment scripts (Python 2 era); see imports note below
-- `docs/`: documentation stubs and notes
-
-## Testing and experiments
-
-- Run unit tests (parity checks vs NetworkX):
-  ```bash
-  python -m pytest
-  ```
-
-- Quick smoke test using the public API:
-  ```python
-  import networkx as nx
-  from alp import alp_preprocess, alp_shortest_path, alp_shortest_path_length
-
-  G = nx.grid_2d_graph(3, 3)  # small 3x3 grid
-  alpG = alp_preprocess(G, num_landmarks=3)
-  path = alp_shortest_path(alpG, (0, 0), (2, 2))
-  length = alp_shortest_path_length(alpG, (0, 0), (2, 2))
-  print(path, length)
-  ```
-
-- Legacy experiment scripts remain under `archive/`. Update their imports to pull from the library API:
-  ```python
-  from alp import alp_preprocess, alp_shortest_path, alp_shortest_path_length
-  ```
-  Then execute the script directly, for example:
-  ```bash
-  python archive/path_planning.py
-  python archive/dataset_characterization.py
-  ```
