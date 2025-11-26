@@ -8,7 +8,7 @@
  * heuristic integration in igraph. Unlike ALP, ALT stores a full L x |V|
  * distance table to deliver tighter bounds at the cost of additional memory.
  *
- * Author: OpenAI Assistant
+ * Author: Newton Campbell <ncampbell@atlanticcouncil.org>
  * Date: 2025-02-07
  */
 

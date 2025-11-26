@@ -7,7 +7,7 @@
  * matrix while remaining admissible for directed graphs by using a symmetric
  * auxiliary metric during preprocessing.
  *
- * Author: OpenAI Assistant
+ * Author: Newton Campbell <ncampbell@atlanticcouncil.org>
  * Date: 2025-02-07
  */
 
