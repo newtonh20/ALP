@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import random
 
-import networkx as nx
+import pytest
+
+nx = pytest.importorskip("networkx", reason="networkx dependency required for ALP integration tests")
 
 from alp import alp_preprocess, alp_shortest_path, alp_shortest_path_length
 
