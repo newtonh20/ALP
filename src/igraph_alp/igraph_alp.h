@@ -8,7 +8,7 @@
  * heuristic used to accelerate shortest-path queries in igraph while keeping
  * memory usage at one distance per vertex plus an L^2 landmark matrix.
  *
- * Author: OpenAI Assistant
+ * Author: Newton Campbell <ncampbell@atlanticcouncil.org>
  * Date: 2025-02-07
  */
 

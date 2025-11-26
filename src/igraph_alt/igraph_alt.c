@@ -6,7 +6,7 @@
  * table to favor tighter heuristics while making directed searches admissible
  * by building the heuristic on the symmetrized graph metric.
  *
- * Author: OpenAI Assistant
+ * Author: Newton Campbell <ncampbell@atlanticcouncil.org>
  * Date: 2025-02-07
  */
 
