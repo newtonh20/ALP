@@ -1,8 +1,84 @@
 # ALP (A*, Landmarks, and Polygon Inequalities)
 ## Author: Newton Campbell
-Repository for the ALP (A*, Landmarks, and Polygon Inequality) algorithm 
 
-Point-to-point shortest path distance queries are a core operation in graph analytics. However, preprocessing algorithms that speed up these queries rely on large data structures for reference. In this repository, we address the computational challenge introduced by these data structures when using landmark-based preprocessing algorithms on large graphs. 
+ALP (A* with Landmarks and Polygon Inequalities) is a shortest-path acceleration method designed for **very large graphs**—the kind where classical Dijkstra’s algorithm becomes too slow and where memory-heavy preprocessing methods like ALT struggle to scale. ALP improves the speed of exact shortest-path queries by giving A* a far stronger sense of “direction” through the graph, allowing it to explore only a tiny portion of the network while still guaranteeing optimal answers.
+
+ALP is meant for situations where:
+
+* The graph is extremely large (millions of vertices or more),
+* Exact shortest paths are required,
+* Preprocessing must remain memory-efficient,
+* And high-performance per-query response is needed.
+
+Developers often approach shortest path problems through Dijkstra’s algorithm. This works on small graphs. It slows down on graphs with millions of nodes. ALP gives A* the information it needs to move through large graphs intelligently. The idea is that A* receives guidance so it does not wander aimlessly.
+
+Take for example, the diagram below:
+
+```mermaid
+graph LR
+    A((A)) --- B((B)) --- C((C)) --- D((D))
+    B --- E((E))
+    C --- F((F))
+    F --- G((G))
+    G --- H((H))
+```
+
+Imagine that this small picture is one tiny corner of a very large graph. Our goal is to guide A* across the graph without storing enormous landmark tables.
+
+We start by placing a few landmarks. These are special vertices that act like reference points. They allow us to describe the shape of the graph without holding too much data.
+
+```mermaid
+graph LR
+    A((A)) --- B(((L1))) --- C((C)) --- D((D))
+    B --- E((E))
+    C --- F(((L2)))
+    F --- G((G))
+    G --- H(((L3)))
+```
+
+The graph now has three landmarks. Each landmark will own a region of the graph. This ownership step is the beginning of ALP’s space savings. We assign each node to the landmark that is closest to it.
+
+```mermaid
+graph LR
+    subgraph Region_1
+      A((A)) --- B(((L1))) --- E((E))
+    end
+    subgraph Region_2
+      C((C)) --- F(((L2))) --- G((G))
+    end
+    subgraph Region_3
+      D((D)) --- H(((L3)))
+    end
+```
+
+Each region now has its landmark. ALP stores only one distance per node. The distance goes from the node to the landmark that owns it. This replaces the large ALT matrix with a compact partition. The saving becomes enormous on graphs with millions of nodes.
+
+Once we have communities and local regions, we look at the global structure. We compute distances between landmarks. That global structure is stored in a very small matrix. It captures how far apart the regions are.
+
+```mermaid
+graph LR
+    L1(((L1))) --- L2(((L2)))
+    L2 --- L3(((L3)))
+    L1 --- L3
+```
+
+This miniature triangle is the coarse map of the entire graph. It gives ALP the ability to understand long range structure even though it stores almost nothing per node.
+
+Now that we have the local structure and the global structure, ALP builds a search heuristic. A* uses this heuristic to decide which node to examine next. The heuristic uses triangle inequalities and polygon inequalities. These inequalities give A* a valid lower bound on how far a node is from the target.
+
+To see this intuitively, imagine a search from A to D.
+
+```mermaid
+graph LR
+    s((A)):::start --- B(((L1))) --- C((C)) --- F(((L2))) --- G((G)) --- H(((L3))) --- t((D)):::target
+classDef start fill:#66ccff,stroke:#333;
+classDef target fill:#ff9999,stroke:#333;
+```
+
+A* wants to know which direction to explore. ALP gives A* a lower bound on the remaining distance to the target. The bound grows stronger as the regions become more separated. The global structure stored in the landmark matrix tells A* which regions lie between the source and the target. The local distances inside each region tell A* where it sits within the region. The polygon inequalities connect these two pieces together so the search becomes highly focused.
+
+In practice, ALP can provide **orders-of-magnitude speedups** over classical methods while using a fraction of the memory required by other preprocessing techniques. This makes it ideal for large-scale transportation networks, routing, gaming environments, knowledge graphs, communication networks, and any domain where the same graph is queried many times for exact distances.
+
 
 ## Requirements
 
